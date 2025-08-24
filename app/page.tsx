@@ -291,12 +291,7 @@ function ClientApp() {
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
         />
-        <textarea
-          rows={4}
-          placeholder="(Opcional) Pega aquí tu plantilla para que la IA ajuste el lenguaje/estructura"
-          value={plantilla}
-          onChange={(e) => setPlantilla(e.target.value)}
-        />
+
         <button className="btn" onClick={generar} disabled={cargando}>
           {cargando ? "Generando con IA…" : "Generar con IA"}
         </button>

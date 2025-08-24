@@ -20,7 +20,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "GeneraActasDeObra",
   description: "Generador de Actas De Visita a Obra",
-};
+  icons: {
+    icon: [
+      { url: "/icono.png" },
+      { url: "/icono.png", type: "image/png", sizes: "32x32" },
+    ],
+    apple: "/icono.png",
+  },
+}
+
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   await requireSession();
