@@ -318,7 +318,7 @@ function ClientApp() {
         />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 10, marginTop: 8 }}>
           {acta.fotos.map((f) => (
-            <figure key={f.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 8, background: "#fff" }}>
+            <figure key={f.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 8, background: "var(--card)" }}>
               <img
                 src={f.url}
                 alt={f.pie?.trim() ? f.pie : ""} // vacío si es decorativa
@@ -362,6 +362,10 @@ function ClientApp() {
           --muted: #6b7280;
           --border: #e5e7eb;
           --ring: #0ea5e9;
+          /* NUEVO: colores de controles */
+          --control-bg: #ffffff;
+          --control-fg: #0f172a;
+          --control-ph: #6b7280;
         }
 
         * { box-sizing: border-box; }
@@ -428,22 +432,26 @@ function ClientApp() {
         }
 
         /* Controles */
+
+
         textarea, input, select {
           width: 100%;
           padding: 10px 12px;
-          background: #222222ff;
-          color: var(--text);
+          background: var(--control-bg);
+          color: var(--control-fg);
           border: 1px solid var(--border);
           border-radius: 10px;
           margin: 8px 0;
           outline: none;
-          transition: border-color .15s ease, box-shadow .15s ease, background .15s;
+          transition: border-color .15s ease, box-shadow .15s ease, background .15s, color .15s;
+          caret-color: var(--ring);
+          color-scheme: light dark;
         }
         textarea:focus, input:focus, select:focus {
           border-color: var(--ring);
           box-shadow: 0 0 0 3px rgba(14,165,233,.2);
         }
-        textarea::placeholder, input::placeholder { color: #9ca3af; }
+        textarea::placeholder, input::placeholder { color: var(--control-ph); }
 
         /* Botones */
         .btn {
@@ -500,7 +508,10 @@ function ClientApp() {
         @media (prefers-color-scheme: dark) {
           :root{
             --bg:#0b1220; --card:#0f172a; --text:#f8fafc; --muted:#94a3b8; --border:#233044; --ring:#22d3ee;
-          }
+            /* controles en oscuro */
+            --control-bg: var(--card);
+            --control-fg: var(--text);
+            --control-ph: #94a3b8;          }
           .hero{
             background: linear-gradient(120deg,
               rgba(34,211,238,.12),
