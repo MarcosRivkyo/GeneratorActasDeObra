@@ -1,13 +1,63 @@
 "use client";
 import React from "react";
 
-export function AudioRecorder({ onTranscribed }: { onTranscribed: (text: string) => void }) {
+// Tipos mínimos para Web Speech API
+type SpeechRecognitionConstructor = new () => SpeechRecognition;
+
+interface SpeechRecognition extends EventTarget {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  start(): void;
+  stop(): void;
+  onresult: ((ev: SpeechRecognitionEvent) => void) | null;
+  onerror: ((ev: SpeechRecognitionErrorEvent) => void) | null;
+  onend: ((ev: Event) => void) | null;
+}
+
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message?: string;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  length: number;
+  isFinal: boolean;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
+
+
+type AudioRecorderProps = { onTranscribed: (text: string) => void };
+
+export function AudioRecorder({ onTranscribed }: AudioRecorderProps) {
   const [recording, setRecording] = React.useState(false);
-  const recognitionRef = React.useRef<any>(null);
+  const recognitionRef = React.useRef<SpeechRecognition | null>(null);
 
   function startDictado() {
-    // @ts-ignore
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!SR) {
       alert("Tu navegador no soporta dictado local.");
       return;
@@ -16,14 +66,16 @@ export function AudioRecorder({ onTranscribed }: { onTranscribed: (text: string)
     const rec = new SR();
     rec.lang = "es-ES";
     rec.interimResults = false;
-    rec.continuous = true; // permite sesiones largas
+    rec.continuous = true;
 
-    rec.onresult = (e: any) => {
-      const texto = e.results[e.results.length - 1][0].transcript;
-      onTranscribed(texto);
+    rec.onresult = (e: SpeechRecognitionEvent) => {
+      const lastIdx = e.results.length - 1;
+      const result = e.results[lastIdx];
+      const texto = result[0]?.transcript ?? "";
+      if (texto) onTranscribed(texto);
     };
 
-    rec.onerror = (err: any) => {
+    rec.onerror = (err: SpeechRecognitionErrorEvent) => {
       console.error("SpeechRecognition error:", err);
       alert("Error en el dictado del navegador");
       stopDictado();
@@ -40,6 +92,7 @@ export function AudioRecorder({ onTranscribed }: { onTranscribed: (text: string)
 
   function stopDictado() {
     recognitionRef.current?.stop();
+    recognitionRef.current = null;
     setRecording(false);
   }
 
@@ -53,3 +106,4 @@ export function AudioRecorder({ onTranscribed }: { onTranscribed: (text: string)
     </div>
   );
 }
+

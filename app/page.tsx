@@ -64,12 +64,14 @@ function safeUUID() {
 
 function coerceActaShape(a: Partial<ActaObra> | ActaObra): ActaObra {
   const base = actaVacia();
+
+  const pa = a as Partial<ActaObra>; 
   const obra = {
     ...base.obra,
-    ...(a as any)?.obra,
+    ...pa.obra,
     situacion: {
       ...(base.obra.situacion || {}),
-      ...(a as any)?.obra?.situacion,
+      ...(pa.obra?.situacion || {}),
     },
   };
   obra.fechaISO = ensureDatetimeLocalString(obra.fechaISO);
@@ -84,6 +86,7 @@ function coerceActaShape(a: Partial<ActaObra> | ActaObra): ActaObra {
     fotos: a.fotos ?? base.fotos,
   } as ActaObra;
 }
+
 
 /* ========== Normalización respuesta IA ========== */
 type IAJsonLike = {
