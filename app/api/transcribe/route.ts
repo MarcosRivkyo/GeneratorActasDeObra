@@ -1,4 +1,3 @@
-// app/api/transcribe/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { openai, OPENAI_TRANSCRIPTION_MODEL } from "@/lib/openai";
 
@@ -24,8 +23,9 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ text: transcript.text });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error en transcripción";
     console.error(err);
-    return NextResponse.json({ error: err?.message || "Error en transcripción" }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

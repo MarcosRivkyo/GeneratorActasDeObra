@@ -21,16 +21,7 @@ function setSessionCookie(res: NextResponse, value: string) {
   });
 }
 
-function isSameOrigin(url: string) {
-  try {
-    const dest = new URL(url);
-    const allowed = (process.env.APP_ORIGIN || "http://localhost:3001").replace(/\/+$/, "");
-    const base = new URL(allowed);
-    return dest.origin === base.origin;
-  } catch {
-    return false;
-  }
-}
+
 
 // app/api/session/route.ts
 function buildSafeRedirect(pathOrUrl?: string) {

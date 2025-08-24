@@ -1,4 +1,3 @@
-// app/api/generate/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { openai, OPENAI_MODEL } from "@/lib/openai";
 import { actaJsonSchema } from "@/lib/schema";
@@ -21,13 +20,19 @@ export async function POST(req: NextRequest) {
 
     const user = `Texto dictado por el usuario (español):\n\n${textoLibre}\n\nSi hay una plantilla, ajústalo a su terminología:\n${plantilla || "(sin plantilla)"}`;
 
+    // 👇 Evita "any" usando satisfies
+    const responseFormat = {
+      type: "json_schema",
+      json_schema: actaJsonSchema,
+    } as const satisfies Record<string, unknown>;
+
     const completion = await openai.chat.completions.create({
       model: OPENAI_MODEL,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
       ],
-      response_format: { type: "json_schema", json_schema: actaJsonSchema as any },
+      response_format: responseFormat,
       temperature: 0,
     });
 
@@ -35,8 +40,10 @@ export async function POST(req: NextRequest) {
     const acta = JSON.parse(jsonText);
 
     return NextResponse.json({ acta });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    // 👇 sin "any"
+    const message = err instanceof Error ? err.message : "Error al generar acta";
     console.error(err);
-    return NextResponse.json({ error: err?.message || "Error al generar acta" }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
