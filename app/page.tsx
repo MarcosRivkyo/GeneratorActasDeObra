@@ -10,6 +10,10 @@ import { ActaPreview } from "@/components/ActaPreview";
 import type { ActaObra } from "@/types/acta";
 import { LogoutButton } from "@/components/LogoutButton";
 
+type WithId<T = unknown> = T & { id?: string };
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+typeof v === "object" && v !== null;
+
 const ActaPDF = dynamic(() => import("@/components/ActaPDF").then(m => m.ActaPDF), {
   ssr: false,
   loading: () => <button className="btn" disabled>Generando PDF…</button>,
@@ -74,9 +78,9 @@ function coerceActaShape(a: Partial<ActaObra> | ActaObra): ActaObra {
     ...base,
     ...a,
     obra,
-    asistentes: (a.asistentes ?? base.asistentes).map(x => ({ id: (x as any).id ?? safeUUID(), ...x })),
-    cuestionesTratadas: (a.cuestionesTratadas ?? base.cuestionesTratadas).map(x => ({ id: (x as any).id ?? safeUUID(), ...x })),
-    firmas: (a.firmas ?? base.firmas).map(x => ({ id: (x as any).id ?? safeUUID(), ...x })),
+    asistentes: (a.asistentes ?? base.asistentes).map((x) => ({ id: (x as WithId).id ?? safeUUID(), ...x })),
+    cuestionesTratadas: (a.cuestionesTratadas ?? base.cuestionesTratadas).map((x) => ({ id: (x as WithId).id ?? safeUUID(), ...x })),
+    firmas: (a.firmas ?? base.firmas).map((x) => ({ id: (x as WithId).id ?? safeUUID(), ...x })),
     fotos: a.fotos ?? base.fotos,
   } as ActaObra;
 }
@@ -91,40 +95,42 @@ type IAJsonLike = {
 };
 type IAActaDirect = Partial<ActaObra> & { obra?: Partial<ActaObra["obra"]> };
 
-function normalizaActaDesdeIA(payload: any, previo: ActaObra): Partial<ActaObra> {
+function normalizaActaDesdeIA(payload: unknown, previo: ActaObra): Partial<ActaObra> {
+  const maybeActa = isRecord(payload) ? (payload as Partial<IAActaDirect>) : undefined;
+
   // 1) Casi ActaObra
-  if (payload?.obra || payload?.asistentes || payload?.estadoObra || payload?.cuestionesTratadas) {
-    const p = payload as IAActaDirect;
+  if (maybeActa?.obra || maybeActa?.asistentes || maybeActa?.estadoObra || maybeActa?.cuestionesTratadas) {
+    const p = maybeActa as IAActaDirect;
     const obra = {
       ...previo.obra,
       ...p.obra,
       fechaISO: ensureDatetimeLocalString(
-        p.obra?.fechaISO ?? toISOFromDDMMYYYY((p as any).obra?.fecha) ?? previo.obra.fechaISO
+        p.obra?.fechaISO ?? toISOFromDDMMYYYY((p as IAActaDirect & { obra?: { fecha?: string } }).obra?.fecha) ?? previo.obra.fechaISO
       ),
     };
     return {
       ...p,
       obra,
-      asistentes: (p.asistentes ?? []).map((a: any) => ({ id: a.id ?? safeUUID(), ...a })),
-      cuestionesTratadas: (p.cuestionesTratadas ?? []).map((q: any) => ({ id: q.id ?? safeUUID(), ...q })),
-      firmas: (p.firmas ?? []).map((f: any) => ({ id: f.id ?? safeUUID(), ...f })),
+      asistentes: (p.asistentes ?? []).map((a) => ({ id: (a as WithId).id ?? safeUUID(), ...a })),
+      cuestionesTratadas: (p.cuestionesTratadas ?? []).map((q) => ({ id: (q as WithId).id ?? safeUUID(), ...q })),
+      firmas: (p.firmas ?? []).map((f) => ({ id: (f as WithId).id ?? safeUUID(), ...f })),
     };
   }
 
-  const j = payload as IAJsonLike;
+  const j = (isRecord(payload) ? (payload as IAJsonLike) : {}) as IAJsonLike;
 
   const fechaISO = ensureDatetimeLocalString(
     toISOFromDDMMYYYY(j.identificacion?.fecha_acta) ?? previo.obra.fechaISO
   );
 
-  const asistentes = (j.asistentes ?? []).map(a => ({
+  const asistentes = (Array.isArray(j.asistentes) ? j.asistentes : []).map((a) => ({
     id: safeUUID(),
     nombre: a?.nombre ?? "",
     cargo: a?.cargo ?? "",
     entidad: a?.empresa ?? "",
   }));
 
-  const cuestiones = (j.cuestiones_tratadas ?? []).map(q => ({
+  const cuestiones = (Array.isArray(j.cuestiones_tratadas) ? j.cuestiones_tratadas : []).map((q) => ({
     id: safeUUID(),
     titulo: q?.tema ?? "",
     detalle: q?.detalle ?? "",
@@ -133,7 +139,7 @@ function normalizaActaDesdeIA(payload: any, previo: ActaObra): Partial<ActaObra>
     accion: q?.accion ?? "",
   }));
 
-  const firmas = (j.firmas ?? []).map(f => ({
+  const firmas = (Array.isArray(j.firmas) ? j.firmas : []).map((f) => ({
     id: safeUUID(),
     nombre: f?.nombre ?? "",
     cargo: f?.cargo ?? "",
@@ -148,6 +154,7 @@ function normalizaActaDesdeIA(payload: any, previo: ActaObra): Partial<ActaObra>
     firmas,
   };
 }
+
 
 function fusionaActa(previo: ActaObra, parcial: Partial<ActaObra>): ActaObra {
   return coerceActaShape({
@@ -309,7 +316,12 @@ function ClientApp() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 10, marginTop: 8 }}>
           {acta.fotos.map((f) => (
             <figure key={f.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 8, background: "#fff" }}>
-              <img src={f.url} alt={f.pie || "Foto"} style={{ width: "100%", height: "auto", borderRadius: 8 }} />
+              <img
+                src={f.url}
+                alt={f.pie?.trim() ? f.pie : ""} // vacío si es decorativa
+                style={{ width: "100%", height: "auto", borderRadius: 8 }}
+              />
+              
               <figcaption style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, gap: 8 }}>
                 <input
                   value={f.pie ?? ""}
